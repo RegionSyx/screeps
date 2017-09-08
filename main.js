@@ -2,10 +2,13 @@ var roleHarvester = require('role.harvester');
 var roleUpgrader = require('role.upgrader');
 var roleBuilder = require('role.builder');
 var roleCollector = require('role.collector');
+var roleClaimer = require('role.claimer');
 var utils = require('utils');
 var config = require('config');
 
 var sources = Game.spawns["Spawn1"].room.find(FIND_SOURCES);
+
+var targetRoom = Game.rooms["W3S94"];
 
 
 var workers2 = [];
@@ -20,7 +23,6 @@ for (var i in sources) {
         roles: [roleHarvester(sources[i])],
         parts: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE],
     });
-    
 }
 
 for (var i = 0; i < 3; i++) {
@@ -31,16 +33,23 @@ workers2.push({
 });
 }
 
+var claimer = {
+    name: "Claimer[0]",
+    roles: [],
+    parts: [CLAIM, CARRY, MOVE],
+};
+
+workers2.push(claimer);
+
 
 module.exports.loop = function () {
-    
     for(var name in Memory.creeps) {
         if(!Game.creeps[name]) {
             delete Memory.creeps[name];
             console.log('Clearing non-existing creep memory:', name);
         }
     }
-    
+
      for (var i in workers2) {
         var worker = workers2[i];
         var name = workers2[i].name;
@@ -49,6 +58,11 @@ module.exports.loop = function () {
                 Game.spawns["Spawn1"].createCreep(worker.parts, name)
            }
         } else {
+            if (worker.name == "Claimer[0]") {
+                var node = new roleClaimer(Game.creeps[name], targetRoom);
+                console.log(node.state);
+                console.log(node.run());
+            }
             for (var i in worker.roles) {
                 var role = worker.roles[i];
 
