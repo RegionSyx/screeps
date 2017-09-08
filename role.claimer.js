@@ -9,45 +9,25 @@ class roleClaimer extends behavior.BehaviorNode {
 
     run() {
         var creep = this.state.creep;
-        if(creep.carry.energy == 0) {
-            var resource = creep.pos.findClosestByRange(FIND_DROPPED_RESOURCES);
-            if (resource != null) {
-                if(creep.pickup(resource) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(resource);
-                    return behavior.RUNNING;
-                } else {
-                    return behavior.RUNNING;
-                }
-            } else {
-                return behavior.SUCCESS;
-            }
-        } else {
-            var extensions = creep.room.find(FIND_STRUCTURES, {
-                filter: { structureType: STRUCTURE_EXTENSION }
-            });
-            for (var i in extensions) {
-                var extension = extensions[i];
-                if (extension.energy < extension.energyCapacity){
-                    if (creep.transfer(extension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                        creep.moveTo(extension, { visualizePathStyle: {} });
-                        return behavior.RUNNING;
-                    } else {
-                        if (creep.carry.energy == 0) {
-                            return behavior.SUCCESS;
-                        } else {
-                            return behavior.RUNNING;
-                        }
-                    }
-                }
-            }
-            if(creep.transfer(Game.spawns['Spawn1'], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(Game.spawns['Spawn1']);
-                return behavior.RUNNING;
-            } else {
-                return behavior.SUCCESS;
-            }
+        var room = this.state.creep.room;
+        console.log(room.name);
+        console.log(room.name == this.state.room);
+        if (room == undefined) {
+            var exit = creep.room.find(FIND_EXIT_TOP)[0];
+            creep.moveTo(exit, { visualizePathStyle: {} });
+            return behavior.RUNNING;
         }
-        console.log("WHAT!");
+        var status = creep.claimController(this.state.room.controller);
+        if(status == ERR_NOT_IN_RANGE) {
+            creep.moveTo(this.state.room.controller, { visualizePathStyle: {} });
+            return behavior.RUNNING;
+        } else if (status == OK) {
+            console.log("Claimed Room " + this.state.room.name);
+            return behavior.SUCCESS;
+        } else {
+            console.log("Error claiming controller: " + status);
+            return behavior.FAILURE;
+        };
     }
 }
 

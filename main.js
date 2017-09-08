@@ -8,8 +8,7 @@ var config = require('config');
 
 var sources = Game.spawns["Spawn1"].room.find(FIND_SOURCES);
 
-var targetRoom = Game.rooms["W3S94"];
-
+var targetRoom = "W3S94";
 
 var workers2 = [];
 for (var i in sources) {
@@ -25,22 +24,13 @@ for (var i in sources) {
     });
 }
 
-for (var i = 0; i < 3; i++) {
+for (var i = 0; i < 4; i++) {
 workers2.push({
     name: "Upgrader[" + i + "]",
     roles: [roleBuilder, roleUpgrader, roleHarvester(sources[i])],
     parts: [WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE],
 });
 }
-
-var claimer = {
-    name: "Claimer[0]",
-    roles: [],
-    parts: [CLAIM, CARRY, MOVE],
-};
-
-workers2.push(claimer);
-
 
 module.exports.loop = function () {
     for(var name in Memory.creeps) {
@@ -58,11 +48,6 @@ module.exports.loop = function () {
                 Game.spawns["Spawn1"].createCreep(worker.parts, name)
            }
         } else {
-            if (worker.name == "Claimer[0]") {
-                var node = new roleClaimer(Game.creeps[name], targetRoom);
-                console.log(node.state);
-                console.log(node.run());
-            }
             for (var i in worker.roles) {
                 var role = worker.roles[i];
 
