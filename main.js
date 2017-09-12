@@ -3,33 +3,22 @@ var roleUpgrader = require('role.upgrader');
 var roleBuilder = require('role.builder');
 var roleCollector = require('role.collector');
 var roleClaimer = require('role.claimer');
+var roleStarter = require('role.starter');
 var utils = require('utils');
 var config = require('config');
+var stats = require('stats');
 
 var sources = Game.spawns["Spawn1"].room.find(FIND_SOURCES);
 
 var targetRoom = "W3S94";
 
-var workers2 = [];
+var workers = [];
 for (var i in sources) {
-    workers2.push({
-        name: "Collector[" + i + "]",
-        roles: [roleCollector(sources[i])],
-        parts: [WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE]
+    workers.push({
+        name: "Starter[" + i + "]",
+        roles: [],
+        parts: [WORK, CARRY, MOVE, MOVE]
     });
-    workers2.push({
-        name: "Harvester[" + i + "]",
-        roles: [roleHarvester(sources[i])],
-        parts: [WORK, WORK, WORK, WORK, WORK, WORK, WORK, MOVE],
-    });
-}
-
-for (var i = 0; i < 4; i++) {
-workers2.push({
-    name: "Upgrader[" + i + "]",
-    roles: [roleBuilder, roleUpgrader, roleHarvester(sources[i])],
-    parts: [WORK, WORK, WORK, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE],
-});
 }
 
 module.exports.loop = function () {
@@ -40,22 +29,61 @@ module.exports.loop = function () {
         }
     }
 
-     for (var i in workers2) {
-        var worker = workers2[i];
-        var name = workers2[i].name;
+     for (var i in workers) {
+        var worker = workers[i];
+        var name = workers[i].name;
         if (!(name in Game.creeps)) {
            if (!Game.spawns["Spawn1"].spawning) {
                 Game.spawns["Spawn1"].createCreep(worker.parts, name)
            }
         } else {
-            for (var i in worker.roles) {
-                var role = worker.roles[i];
-
-                if (role.canWork(Game.creeps[name])) {
-                    role.run(Game.creeps[name])
-                    break;
-                }
+            if (!Memory.current_stack) {
+                Memory.current_stack = [{}]
             }
+
+            if (!Memory.stack) {
+                Memory.stack = {}
+            }
+
+            if (!Memory.stack[name]) {
+                Memory.stack[name] = [];
+            }
+
+            var role = new roleStarter(Game.creeps[name]);
+
+            role.state = Memory.current_stack.pop()
+            console.log(role.step());
+            Memory.current_stack.push(role.state);
+
         }
     }
+
+    var towers = [];
+    _.values(Game.rooms).forEach(room => {
+        room.find(FIND_MY_STRUCTURES, {
+            filter: { structureType: STRUCTURE_TOWER }
+        }).forEach( v => { towers.push(v); });
+    });
+
+    towers.forEach( tower => {
+        var structures = tower.room.find(FIND_STRUCTURES);
+        structures.forEach(s => {
+            console.log(s);
+            if (s.hits < s.hitsMax) {
+                tower.repair(s);
+            }
+        });
+
+        var creeps = tower.room.find(FIND_MY_CREEPS);
+        creeps.forEach(c => {
+            if (c.hits < c.hitsMax) {
+                tower.heal(c);
+            }
+        });
+
+        var enemies = tower.room.find(FIND_HOSTILE_CREEPS);
+        enemies.forEach(e => { tower.attack(e); });
+    });
+
+    stats.collectStats();
 }

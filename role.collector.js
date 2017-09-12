@@ -24,7 +24,7 @@ var roleCollector = function (target) {
             }
         }
         else {
-        
+
             var extensions = creep.room.find(FIND_STRUCTURES, {
                 filter: { structureType: STRUCTURE_EXTENSION }
             });
@@ -38,6 +38,21 @@ var roleCollector = function (target) {
                     }
                 }
             }
+
+            var towers = creep.room.find(FIND_STRUCTURES, {
+                filter: { structureType: STRUCTURE_TOWER }
+            });
+
+            for (var i in towers) {
+                var tower = towers[i];
+                if (tower.energy < tower.energyCapacity){
+                    if (creep.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(tower, { visualizePathStyle: {} });
+                        return;
+                    }
+                }
+            }
+
             
             if(creep.transfer(Game.spawns['Spawn1'], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(Game.spawns['Spawn1']);
