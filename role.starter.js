@@ -8,7 +8,6 @@ class approach extends behavior.BehaviorNode {
     }
 
     step() {
-        console.log(this.creep);
         if (this.creep.pos.isNearTo(this.target)) {
             return this.success();
         }
@@ -34,7 +33,7 @@ class harvest extends behavior.BehaviorNode {
     }
 
     step() {
-        if (!this.state.status) { this.state.status = null; }
+        if (this.state.status == undefined) { this.state.status = null; }
         switch (this.state.status) {
             case null:
                 this.state.status = this.creep.harvest(this.target);
@@ -59,10 +58,10 @@ class deposit extends behavior.BehaviorNode {
     }
 
     step() {
-        if (!this.state.status) { this.state.status = null; }
+        if (this.state.status == undefined) { this.state.status = null; }
         switch (this.state.status) {
             case null:
-                this.state.status = this.creep.deposit(this.target);
+                this.state.status = this.creep.transfer(this.target, RESOURCE_ENERGY);
                 return this.running();
             case OK:
                 return this.success();
@@ -84,10 +83,11 @@ class upgrade extends behavior.BehaviorNode {
     }
 
     step() {
-        if (!this.state.status) { this.state.status = null; }
+        if (this.state.status == undefined) { this.state.status = null; }
         switch (this.state.status) {
             case null:
-                this.state.status = this.creep.upgrade(this.target);
+                this.state.status = this.creep.upgradeController(this.target);
+                console.log(this.state.status);
                 return this.running();
             case OK:
                 return this.success();
@@ -104,17 +104,18 @@ class isCreepFull extends behavior.Conditional {
     }
 
     cond() {
-        this.creep.carry.energy == this.creep.carryCapacity;
+        return this.creep.carry.energy == this.creep.carryCapacity;
     }
 }
 
 class isCreepEmpty extends behavior.Conditional {
     constructor(creep) {
+        super();
         this.creep = creep;
     }
 
     cond() {
-        this.creep.carry.energy == 0;
+         return this.creep.carry.energy == 0;
     }
 }
 
@@ -138,10 +139,12 @@ class harvestUntilFull extends behavior.BehaviorNode {
 
     step() {
         return this.run(
-            new behavior.Sequence([
-                new harvest(this.creep, this.target),
-                new isCreepFull(this.creep)
-            ])
+            new behavior.UntilSuccess(
+                new behavior.Sequence([
+                    new harvest(this.creep, this.target),
+                    new isCreepFull(this.creep)
+                ])
+            )
         );
     }
 }
@@ -171,32 +174,33 @@ class upgradeUntilEmpty extends behavior.BehaviorNode {
 
     step() {
         return this.run(
-            new behavior.Sequence([
-                new upgrade(this.creep, this.target),
-                new isSpawnEmpty(this.creep),
-            ])
+            new behavior.UntilSuccess(
+                new behavior.Sequence([
+                    new upgrade(this.creep, this.target),
+                    new isCreepEmpty(this.creep)
+                ])
+            )
         );
     }
 }
 
 
 class roleStarter extends behavior.BehaviorNode {
-    constructor(creep) {
+    constructor(creep, target) {
         super();
         this.creep = creep
+        this.source = target;
     }
 
     step() {
         var creep = this.creep
         var spawn = Game.spawns["Spawn1"];
-        var source = spawn.room.find(FIND_SOURCES)[0];
+        var source = this.source;
         var controller = spawn.room.controller;
         return this.run(
             new behavior.Sequence([
                 new approach(creep, source),
                 new harvestUntilFull(creep, source),
-                new approach(creep, spawn),
-                new depositUntilFull(creep, spawn),
                 new approach(creep, controller),
                 new upgradeUntilEmpty(creep, controller),
             ])

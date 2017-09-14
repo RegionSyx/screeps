@@ -4,6 +4,7 @@ var roleBuilder = require('role.builder');
 var roleCollector = require('role.collector');
 var roleClaimer = require('role.claimer');
 var roleStarter = require('role.starter');
+var behavior = require('behavior');
 var utils = require('utils');
 var config = require('config');
 var stats = require('stats');
@@ -16,6 +17,7 @@ var workers = [];
 for (var i in sources) {
     workers.push({
         name: "Starter[" + i + "]",
+        target: sources[i],
         roles: [],
         parts: [WORK, CARRY, MOVE, MOVE]
     });
@@ -37,23 +39,23 @@ module.exports.loop = function () {
                 Game.spawns["Spawn1"].createCreep(worker.parts, name)
            }
         } else {
-            if (!Memory.current_stack) {
-                Memory.current_stack = [{}]
+            if (!Memory.creeps[name].stack) {
+                Memory.creeps[name].stack = [];
             }
 
-            if (!Memory.stack) {
-                Memory.stack = {}
+            Memory.current_stack = Memory.creeps[name].stack;
+
+            var role = new roleStarter(Game.creeps[name], worker.target);
+
+            var status = role.run(role);
+            if (status == behavior.SUCCESS) {
+                Memory.current_stack = [];
+            } else if (status == behavior.FAILURE) {
+                console.log("Failure:\n" + JSON.stringify(Memory.current_stack));
+                Memory.current_stack = [];
             }
 
-            if (!Memory.stack[name]) {
-                Memory.stack[name] = [];
-            }
-
-            var role = new roleStarter(Game.creeps[name]);
-
-            role.state = Memory.current_stack.pop()
-            console.log(role.step());
-            Memory.current_stack.push(role.state);
+            Memory.creeps[name].stack = Memory.current_stack;
 
         }
     }
@@ -68,7 +70,6 @@ module.exports.loop = function () {
     towers.forEach( tower => {
         var structures = tower.room.find(FIND_STRUCTURES);
         structures.forEach(s => {
-            console.log(s);
             if (s.hits < s.hitsMax) {
                 tower.repair(s);
             }

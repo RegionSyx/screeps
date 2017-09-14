@@ -9,24 +9,17 @@ class BehaviorNode {
         this.stack = [];
     }
 
-    restoreStack(stack) {
-        if(stack.length > 0) {
-            this.state = stack.pop();
-        }
-        this.stack = stack;
-    }
-
-    saveStack(stack) {
-        this.stack.push(this.state);
-    }
-
     run(node) {
         var stack = Memory.current_stack;
 
         node.state = stack.pop() || {};
-        node.state.name = this.constructor.name;
+        node.state.name = node.constructor.name;
         var status = node.step();
-        stack.push(node.state);
+        if (status == RUNNING) {
+            stack.push(node.state);
+        } else {
+//            stack.push({});
+        }
 
         return status;
     }
@@ -80,23 +73,44 @@ class Sequence extends CompositeNode {
     }
 };
 
-class Priority extends CompositeNode {
+class Selector extends CompositeNode {
     start() {
         this.state.i = 0;
     }
     step() {
         if (!this.state.i) { this.state.i = 0 }
         while (this.state.i < this.children.length) {
-            status = this.run(this.children[this.state.i]);
+            var status = this.run(this.children[this.state.i]);
             if (status == RUNNING) {
                 return RUNNING;
             } else if (status == SUCCESS) {
                 return SUCCESS;
             }
+            this.state.i++;
         }
         return FAILURE;
     }
 }
+
+class ParalellSelector extends CompositeNode {
+    start() {
+        this.state.i = 0;
+    }
+    step() {
+        if (!this.state.i) { this.state.i = 0 }
+        while (this.state.i < this.children.length) {
+            var status = this.run(this.children[this.state.i]);
+            if (status == RUNNING) {
+                return RUNNING;
+            } else if (status == SUCCESS) {
+                return SUCCESS;
+            }
+            this.state.i++;
+        }
+        return FAILURE;
+    }
+}
+
 
 class Success extends BehaviorNode {
     step() { return SUCCESS; }
@@ -108,7 +122,8 @@ class Failure extends BehaviorNode {
 
 class Conditional extends BehaviorNode {
     step() {
-        return this.cond() ? SUCCESS : FAILURE;
+        var state = this.cond() ? SUCCESS : FAILURE;
+        return state
     }
 
     cond() {
@@ -137,6 +152,27 @@ class Inverter extends BehaviorNode {
     }
 }
 
+class DecoratorNode extends BehaviorNode {
+    constructor(child) {
+        super();
+        this.child = child;
+    }
+}
+
+class UntilSuccess extends DecoratorNode {
+    step() {
+        if (this.state.status == undefined) { this.state.status = null }
+
+        while(this.state.status != SUCCESS) {
+            this.state.status = this.run(this.child);
+            if (this.state.status == RUNNING) {
+                return this.running();
+            }
+        }
+        return this.success()
+    }
+}
+
 module.exports = {
     SUCCESS,
     FAILURE,
@@ -144,9 +180,11 @@ module.exports = {
     BehaviorNode,
     CompositeNode,
     Sequence,
-    Priority,
+    Selector,
     Success,
     Failure,
     Conditional,
-    Inverter
+    Inverter,
+    DecoratorNode,
+    UntilSuccess,
 }
