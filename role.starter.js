@@ -126,7 +126,7 @@ class isSpawnFull extends behavior.Conditional {
     }
 
     cond() {
-        this.spawn.energy == this.spawn.energyCapacity;
+        return this.spawn.room.energyAvailable == this.spawn.room.energyCapacityAvailable;
     }
 }
 
@@ -157,10 +157,12 @@ class depositUntilFull extends behavior.BehaviorNode {
 
     step() {
         return this.run(
-            new behavior.Sequence([
-                new deposit(this.creep, this.target),
-                new isSpawnFull(this.target)
-            ])
+            new behavior.UntilSuccess(
+                new behavior.Sequence([
+                    new deposit(this.creep, this.target),
+                    new isSpawnFull(this.target)
+                ])
+            )
         );
     }
 }
@@ -201,8 +203,18 @@ class roleStarter extends behavior.BehaviorNode {
             new behavior.Sequence([
                 new approach(creep, source),
                 new harvestUntilFull(creep, source),
-                new approach(creep, controller),
-                new upgradeUntilEmpty(creep, controller),
+                new behavior.Selector([
+                    new behavior.Sequence([
+                        new behavior.Inverter(new isSpawnFull(spawn)),
+                        new approach(creep, spawn),
+                        new deposit(creep, spawn),
+                    ]),
+                    new behavior.Sequence([
+                        new behavior.Inverter(new isCreepEmpty(creep)),
+                        new approach(creep, controller),
+                        new upgradeUntilEmpty(creep, controller),
+                    ])
+                ])
             ])
         );
     }

@@ -14,10 +14,10 @@ var sources = Game.spawns["Spawn1"].room.find(FIND_SOURCES);
 var targetRoom = "W3S94";
 
 var workers = [];
-for (var i in sources) {
+for (var i = 0; i < 6; i++) {
     workers.push({
         name: "Starter[" + i + "]",
-        target: sources[i],
+        target: sources[i % sources.length],
         roles: [],
         parts: [WORK, CARRY, MOVE, MOVE]
     });
