@@ -13,15 +13,22 @@ var sources = Game.spawns["Spawn1"].room.find(FIND_SOURCES);
 
 var targetRoom = "W3S94";
 
-var workers = [];
-for (var i = 0; i < 6; i++) {
-    workers.push({
-        name: "Starter[" + i + "]",
-        target: sources[i % sources.length],
-        roles: [],
-        parts: [WORK, CARRY, MOVE, MOVE]
-    });
+
+function stage0() {
+    var workers = [];
+    for (var i = 0; i < 4; i++) {
+        workers.push({
+            name: "Starter[" + i + "]",
+            target: sources[i % sources.length],
+            roles: [],
+            parts: [WORK, CARRY, MOVE, MOVE]
+        });
+    }
+    return workers;
 }
+
+var workers = stage0();
+
 
 module.exports.loop = function () {
     for(var name in Memory.creeps) {
@@ -31,7 +38,7 @@ module.exports.loop = function () {
         }
     }
 
-     for (var i in workers) {
+    for (var i in workers) {
         var worker = workers[i];
         var name = workers[i].name;
         if (!(name in Game.creeps)) {
