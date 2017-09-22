@@ -1,38 +1,38 @@
-var roleBuilder = {
-    
-    canWork: function(creep) {
-        if (creep.room.find(FIND_MY_CONSTRUCTION_SITES).length == 0) {
-            return false;
-        }
-        return (creep.room.energyAvailable + creep.carry.energy >= (creep.room.energyCapacityAvailable - 100));
-    },
+var behavior = require("behavior");
+var actions = require("actions");
+var conditions = require("conditions");
 
-    /** @param {Creep} creep **/
-    run: function(creep) {
-        
-        if(creep.carry.energy > 0) {
-            const target = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-             if(target) {
-                if(creep.build(target) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target);
-                }
-            }
-        }
-        else {
-            var err = creep.withdraw(Game.spawns["Spawn1"], RESOURCE_ENERGY);
-            
-            switch (err) {
-                case OK:
-                case ERR_BUSY:
-                    return;
-                case ERR_NOT_IN_RANGE:
-                    creep.moveTo(Game.spawns['Spawn1']);
-                    return;
-                default:
-                    console.log(creep.name + ": " + err);
-            }
-        }
+
+class roleBuilder extends behavior.BehaviorNode {
+    constructor(creep, target) {
+        super();
+        this.creep = creep
+        this.source = target.pos.findClosestByRange(
+            Game.spawns["Spawn1"].room.find(FIND_SOURCES)
+        );
+        this.site = target;
     }
-};
+
+    step() {
+        return this.run(
+            new behavior.Sequence([
+                new actions.approach(this.creep, this.source),
+                new actions.harvestUntilFull(this.creep, this.source),
+                new actions.approach(this.creep, this.site),
+                new behavior.UntilFailure(
+                    new behavior.Sequence([
+                        new behavior.Inverter(
+                            new behavior.Selector([
+                                new conditions.isCreepEmpty(this.creep),
+                //                new conditions.isBuildingFinished(this.site),
+                            ])
+                        ),
+                        new actions.build(this.creep, this.site),
+                    ])
+                )
+            ])
+        );
+    }
+}
 
 module.exports = roleBuilder;

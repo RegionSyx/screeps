@@ -173,6 +173,20 @@ class UntilSuccess extends DecoratorNode {
     }
 }
 
+class UntilFailure extends DecoratorNode {
+    step() {
+        if (this.state.status == undefined) { this.state.status = null }
+
+        while(this.state.status != FAILURE) {
+            this.state.status = this.run(this.child);
+            if (this.state.status == RUNNING) {
+                return this.running();
+            }
+        }
+        return this.success()
+    }
+}
+
 module.exports = {
     SUCCESS,
     FAILURE,
@@ -187,4 +201,5 @@ module.exports = {
     Inverter,
     DecoratorNode,
     UntilSuccess,
+    UntilFailure,
 }
